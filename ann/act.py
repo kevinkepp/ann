@@ -1,36 +1,63 @@
 import numpy as np
+import scipy.special
 
 
-def relu(v):
-	# return np.maximum(0, v)
-	return v * (v > 0)
+def linear(z):
+	return z
 
 
-def d_relu(v_relu):
-	c = v_relu.copy()
-	c[c > 0] = 1
-	return c
+def d_linear(a):
+	return 1
 
 
-def d_tanh(v_tanh):
-	return 1 - v_tanh ** 2
+def relu(z):
+	return z * (z > 0)
 
 
-def sigmoid(v):
-	return 1 / (1 + np.exp(-v))
+def d_relu(a):
+	return np.int64(a > 0)
 
 
-def d_sigmoid(v_sigmoid):
-	return v_sigmoid * (1 - v_sigmoid)
+def tanh(z):
+	return np.tanh(z)
 
 
-def softmax(v):
-	# unstable
-	# exps = np.exp(v); return exps / np.sum(exps)
-	# stable
-	exps = np.exp(v - np.max(v))
+def d_tanh(a):
+	return 1 - a ** 2
+
+
+def sigmoid(z):
+	return scipy.special.expit(z)
+
+
+def d_sigmoid(a):
+	return a * (1 - a)
+
+
+def softmax(z):
+	exps = np.exp(z - np.max(z, axis=1, keepdims=True))
 	return exps / np.sum(exps, axis=1, keepdims=True)
 
 
-def d_softmax(v_softmax):
-	return v_softmax * (1 - v_softmax)
+def softmax_with_cross_entropy(z):
+	# separate function only for later reference
+	return softmax(z)
+
+
+def get_d_act(act):
+	if act == linear:
+		return d_linear
+	elif act == relu:
+		return d_relu
+	elif act == tanh:
+		return d_tanh
+	elif act == sigmoid:
+		return d_sigmoid
+	elif act == softmax:
+		# derivative depends on activation function and will be calculated in backward method in layer
+		return None
+	elif act == softmax_with_cross_entropy:
+		# derivative depends on activation function and will be calculated in backward method in layer
+		return None
+	else:
+		raise NotImplementedError("No derivative for activation function '{}'".format(act.__name__))

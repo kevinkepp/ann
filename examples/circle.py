@@ -1,3 +1,4 @@
+import random
 import time
 
 import matplotlib
@@ -13,37 +14,40 @@ from sklearn.preprocessing import StandardScaler
 
 # prepare data
 from ann.act import sigmoid, relu
-from ann.base import FullyConnected
+from ann.base import FC
 from ann.loss import cross_entropy_binary
 from ann.opt import GradientDescent
 from ann.sklearn import NetworkClassifier
 
+# set seeds
+random.seed(42)
 np.random.seed(42)
 
+# prepare data
 x, y = make_circles()
 print("Dataset: X.shape {}, Y.shape {}".format(x.shape, y.shape))
 x = StandardScaler().fit_transform(x)
-y = y.astype(int)
-x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
+y = y.reshape(-1, 1).astype(int)
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2)
 
-# train my ANN
-layers = [FullyConnected(x_train.shape[1], 128, relu), FullyConnected(128, 1, sigmoid)]
-net = NetworkClassifier(layers, optimizer_cls=GradientDescent, epochs=1000, verbose=1,
-						optimizer__loss=cross_entropy_binary, optimizer__lr=0.5, optimizer__batch_size=0)
+# define model and optimization
+layers = [FC(x_train.shape[1], 128, relu), FC(128, 1, sigmoid)]
+opt = GradientDescent(loss_func=cross_entropy_binary, lr=0.5)
+net = NetworkClassifier(layers, opt)
 
+# train network
 t_start = time.time()
-losses = net.fit(x_train, y_train)
+losses, _, _ = net.fit(x_train, y_train, epochs=1000, track_loss=True, verbose=1)
 t_dur = time.time() - t_start
 print("Training took {} seconds".format(t_dur))
 print("Final loss: {}".format(losses[-1]))
 
-# prepare mesh
+# plot results
 x_min, x_max = x[:, 0].min() - .5, x[:, 0].max() + .5
 y_min, y_max = x[:, 1].min() - .5, x[:, 1].max() + .5
 xx, yy = np.meshgrid(np.arange(x_min, x_max, .02), np.arange(y_min, y_max, .02))
 cm = plt.cm.RdBu
 cm_bright = ListedColormap(['#FF0000', '#0000FF'])
-
 plt.figure(figsize=(16, 8))
 ax = plt.subplot(1, 2, 1)
 Z = net.predict_proba(np.c_[xx.ravel(), yy.ravel()])[:, 1]
@@ -58,11 +62,9 @@ ax.set_yticks(())
 score = net.score(x_test, y_test)
 ax.text(xx.max() - .3, yy.min() + .3, ('%.2f' % score).lstrip('0'), size=15, horizontalalignment='right')
 ax.set_title("Network")
-
 ax = plt.subplot(1, 2, 2)
 ax.plot(range(len(losses)), losses)
 ax.set_xlabel("iterations")
 ax.set_ylabel("loss")
-
 plt.tight_layout()
 plt.show()

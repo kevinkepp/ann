@@ -23,6 +23,8 @@ class GradientDescent(object):
 		return loss
 
 	def compute_loss(self, net, y_pred, y, no_d=False):
+		if y.ndim == 1:
+			y = y.reshape(-1, 1)
 		loss = self.loss_func(y_pred, y)
 		loss += self._get_weight_decay(net, y_pred)
 		dy_pred = ann.loss.get_d_loss(self.loss_func)(y_pred, y) if not no_d else None

@@ -48,7 +48,7 @@ class FC(object):
 		self.b = None
 		self.z = None
 		self.a = None
-		self.drop = None
+		self.drop_mask = None
 		self.da = None
 		self.dz = None
 		self.dw = None
@@ -72,15 +72,15 @@ class FC(object):
 		self.z = np.dot(a_prev, self.w) + self.b
 		self.a = self.act(self.z)
 		if not deterministic and self.dropout:
-			self.drop = np.random.rand(self.a.shape[0], self.a.shape[1]) > self.dropout
-			self.a = np.multiply(self.a, self.drop)
+			self.drop_mask = np.random.rand(self.a.shape[0], self.a.shape[1]) > self.dropout
+			self.a = np.multiply(self.a, self.drop_mask)
 			self.a /= (1 - self.dropout)
 		return self.a
 
 	def backward(self, da):
 		self.da = da
-		if self.drop is not None:
-			da = np.multiply(da, self.drop)
+		if self.drop_mask is not None:
+			da = np.multiply(da, self.drop_mask)
 			da /= (1 - self.dropout)
 		m = self.a_prev.shape[0]
 		l2 = self.weight_decay / m * self.w

@@ -15,7 +15,7 @@ def relu(z):
 
 
 def d_relu(a):
-	return np.int64(a > 0)
+	return a > 0
 
 
 def tanh(z):

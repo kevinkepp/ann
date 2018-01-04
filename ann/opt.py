@@ -1,5 +1,4 @@
 import numpy as np
-from sklearn.base import BaseEstimator
 from sklearn.utils import shuffle
 
 import ann.act

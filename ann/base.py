@@ -91,7 +91,7 @@ class FC(object):
 			s = np.sum(tmp, axis=1, keepdims=True)
 			self.dz = tmp - self.a * s
 		elif self.act == ann.act.softmax_with_cross_entropy:
-			self.dz = da  # dz directly calculated in d_cross_entropy_with_softmax
+			self.dz = da  # dz directly calculated in loss.d_cross_entropy_with_softmax
 		else:
 			self.dz = np.multiply(da, self.d_act(self.a))
 		self.dw = np.dot(self.a_prev.T, self.dz) / m + l2

@@ -40,7 +40,7 @@ def softmax(z):
 
 
 def softmax_with_cross_entropy(z):
-	# separate function only for later reference
+	"""should be used in conjunction with loss.cross_entropy_with_softmax"""
 	return softmax(z)
 
 
@@ -53,11 +53,8 @@ def get_d_act(act):
 		return d_tanh
 	elif act == sigmoid:
 		return d_sigmoid
-	elif act == softmax:
-		# derivative depends on activation function and will be calculated in backward method in layer
-		return None
-	elif act == softmax_with_cross_entropy:
-		# derivative depends on activation function and will be calculated in backward method in layer
+	elif act == softmax or act == softmax_with_cross_entropy:
+		# derivative depends on loss function and will be calculated in layer backward method
 		return None
 	else:
 		raise NotImplementedError("No derivative for activation function '{}'".format(act.__name__))

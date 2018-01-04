@@ -11,6 +11,7 @@ def d_mse(y_pred, y):
 
 
 def cross_entropy_binary(y_pred, y):
+	"""y_pred - shape (m,1) and values in [0,1]"""
 	m = y.shape[0]
 	nll = -np.dot(y.T, np.log(y_pred)) - np.dot(1 - y.T, np.log(1 - y_pred))
 	return np.sum(nll) / m
@@ -21,23 +22,24 @@ def d_cross_entropy_binary(y_pred, y):
 
 
 def cross_entropy(y_pred, y):
+	"""y_pred - shape (m,n) and values in [0,1]"""
 	m = y.shape[0]
 	nll = -np.log(np.sum(np.multiply(y_pred, y), axis=1))
 	return np.sum(nll) / m
 
 
 def d_cross_entropy(y_pred, y):
-	# FIXME this can be numerically unstable
+	# FIXME this can be numerically unstable, is there a way to make it stable?
 	return -np.divide(y, y_pred)
 
 
 def cross_entropy_with_softmax(y_pred, y):
-	# separate function only for later reference
+	"""to be used in conjunction with activation function act.softmax_with_cross_entropy"""
 	return cross_entropy(y_pred, y)
 
 
 def d_cross_entropy_with_softmax(y_pred, y):
-	# calculates dz, not dy_pred
+	# calculates dz directly using LogSumExp trick
 	return y_pred - y
 
 

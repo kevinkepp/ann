@@ -6,7 +6,7 @@ import ann.loss
 
 
 class SGD(object):
-	def __init__(self, loss_func, lr, lr_decay=0, batch_size=0):
+	def __init__(self, loss_func, lr=0.01, lr_decay=0, batch_size=0):
 		self.loss_func = loss_func
 		self.lr = lr
 		self.lr_decay = lr_decay
@@ -110,7 +110,7 @@ class SGD(object):
 
 
 class SGDM(SGD):
-	def __init__(self, loss_func, lr, lr_decay=0, batch_size=0, m=0.9):
+	def __init__(self, loss_func, lr=0.01, lr_decay=0, batch_size=0, m=0.9):
 		super().__init__(loss_func, lr, lr_decay, batch_size)
 		self.m = m
 
@@ -129,20 +129,20 @@ class SGDM(SGD):
 
 
 class RMSprop(SGD):
-	def __init__(self, loss_func, lr, lr_decay=0, batch_size=0, beta=0.999, eps=1e-8):
+	def __init__(self, loss_func, lr=0.001, lr_decay=0, batch_size=0, rho=0.9, eps=1e-8):
 		super().__init__(loss_func, lr, lr_decay, batch_size)
-		self.beta = beta
+		self.rho = rho
 		self.eps = eps
 
 	def update_net(self, net):
 		lr = self.get_lr()
 		for i, layer in enumerate(net.layers):
 			# update moments
-			layer.vdw = self.beta * layer.vdw + (1 - self.beta) * np.power(layer.dw, 2)
-			layer.vdb = self.beta * layer.vdb + (1 - self.beta) * np.power(layer.db, 2)
+			layer.vdw = self.rho * layer.vdw + (1 - self.rho) * np.power(layer.dw, 2)
+			layer.vdb = self.rho * layer.vdb + (1 - self.rho) * np.power(layer.db, 2)
 			# bias correction
-			vdw = layer.vdw / (1 - np.power(self.beta, self._its))
-			vdb = layer.vdb / (1 - np.power(self.beta, self._its))
+			vdw = layer.vdw / (1 - np.power(self.rho, self._its))
+			vdb = layer.vdb / (1 - np.power(self.rho, self._its))
 			# update parameters
 			layer.w -= lr * np.divide(layer.dw, np.square(vdw) + self.eps)
 			layer.b -= lr * np.divide(layer.db, np.square(vdb) + self.eps)

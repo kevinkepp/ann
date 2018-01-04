@@ -40,21 +40,21 @@ class GradientDescent(object):
 				 patience=100, tol=1e-8, iter_callback=None, verbose=0):
 		self.reset()
 		net.initialize()
-		ls_train, ls_dev = [], []
+		ls_batch, ls_dev = [], []
 		comp_loss_dev = x_dev is not None and y_dev is not None
 		its_pat = 0
 		if verbose:
 			print("Starting optimization")
-		for e in range(1, epochs + 1):
-			for x_b, y_b in self.get_batches(x_train, y_train):
-				loss_train = self.step(net, x_b, y_b)
+		for _ in range(epochs):
+			for x_batch, y_batch in self.get_batches(x_train, y_train):
+				loss_batch = self.step(net, x_batch, y_batch)
 				if comp_loss_dev:
 					loss_dev, _ = self.compute_loss(net, net.forward(x_dev), y_dev, no_d=True)
 				if verbose:
-					max_its = int(np.rint(x_train.shape[0] / self.batch_size) if self.batch_size else 1 * epochs)
-					print("Iteration {}/{}, loss train: {}".format(self._its, max_its, loss_train)
+					max_its = int(np.rint(x_train.shape[0] / self.batch_size) if self.batch_size else 1) * epochs
+					print("Iteration {}/{}, loss batch: {}".format(self._its, max_its, loss_batch)
 						  + (", loss dev: {}".format(loss_dev) if comp_loss_dev else ""))
-				if np.math.isnan(loss_train) or np.math.isinf(loss_train) or comp_loss_dev and \
+				if np.math.isnan(loss_batch) or np.math.isinf(loss_batch) or comp_loss_dev and \
 						(np.math.isinf(loss_dev) or np.math.isnan(loss_dev)):
 					if verbose:
 						print("Under-/overflow detected")
@@ -67,11 +67,11 @@ class GradientDescent(object):
 							print("Stopping early")
 						break
 				if track_loss:
-					ls_train.append(loss_train)
+					ls_batch.append(loss_batch)
 					if comp_loss_dev:
 						ls_dev.append(loss_dev)
 				if iter_callback:
-					iter_callback(x_b, y_b, loss_train, loss_dev, self._its)
+					iter_callback(x_batch, y_batch, loss_batch, loss_dev, self._its)
 			else:
 				continue
 			if verbose:
@@ -80,7 +80,7 @@ class GradientDescent(object):
 		else:
 			if verbose:
 				print("Optimization finished")
-		return ls_train, ls_dev, self._its
+		return ls_batch, ls_dev, self._its
 
 	def get_batches(self, x, y):
 		bs = self.batch_size or x.shape[0]
@@ -111,7 +111,7 @@ class GradientDescent(object):
 
 
 class GradientDescentMomentum(GradientDescent):
-	def __init__(self, loss_func, lr, lr_decay, batch_size, m=0.9):
+	def __init__(self, loss_func, lr, lr_decay=0, batch_size=0, m=0.9):
 		super().__init__(loss_func, lr, lr_decay, batch_size)
 		self.m = m
 

@@ -5,7 +5,7 @@ import ann.act
 import ann.loss
 
 
-class GradientDescent(object):
+class SGD(object):
 	def __init__(self, loss_func, lr, lr_decay=0, batch_size=0):
 		self.loss_func = loss_func
 		self.lr = lr
@@ -109,7 +109,7 @@ class GradientDescent(object):
 			[layer.weight_decay * np.linalg.norm(layer.w, "fro") if layer.weight_decay else 0 for layer in net.layers])
 
 
-class GradientDescentMomentum(GradientDescent):
+class SGDM(SGD):
 	def __init__(self, loss_func, lr, lr_decay=0, batch_size=0, m=0.9):
 		super().__init__(loss_func, lr, lr_decay, batch_size)
 		self.m = m
@@ -128,7 +128,7 @@ class GradientDescentMomentum(GradientDescent):
 			layer.b -= lr * mdb
 
 
-class RMSprop(GradientDescent):
+class RMSprop(SGD):
 	def __init__(self, loss_func, lr, lr_decay=0, batch_size=0, beta=0.999, eps=1e-8):
 		super().__init__(loss_func, lr, lr_decay, batch_size)
 		self.beta = beta
@@ -148,7 +148,7 @@ class RMSprop(GradientDescent):
 			layer.b -= lr * np.divide(layer.db, np.square(vdb) + self.eps)
 
 
-class Adam(GradientDescent):
+class Adam(SGD):
 	def __init__(self, loss_func, lr=0.001, lr_decay=0, batch_size=0, beta1=0.9, beta2=0.999, eps=1e-8):
 		super().__init__(loss_func, lr, lr_decay, batch_size)
 		self.beta1 = beta1

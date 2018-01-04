@@ -12,7 +12,7 @@ from sklearn.preprocessing import StandardScaler
 from ann.act import sigmoid, relu
 from ann.base import FC
 from ann.loss import cross_entropy_binary
-from ann.opt import GradientDescent
+from ann.opt import SGD
 from ann.sklearn import NetworkClassifier
 
 # set seeds
@@ -29,7 +29,7 @@ layers = [
 	FC(n_in=x_train.shape[1], n_out=32, act=relu),
 	FC(n_in=32, n_out=1, act=sigmoid)
 ]
-opt = GradientDescent(loss_func=cross_entropy_binary, lr=0.1)
+opt = SGD(loss_func=cross_entropy_binary, lr=0.1)
 net = NetworkClassifier(layers, opt)
 
 # train network

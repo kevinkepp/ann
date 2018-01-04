@@ -44,7 +44,7 @@ class ANNBinaryClassification(unittest.TestCase):
 
 		# compute cost example
 		y = np.array([[True, False, False]]).T
-		cost, _ = GradientDescent(cross_entropy_binary, 0).compute_loss(net, y_pred, y)
+		cost, _ = SGD(cross_entropy_binary, 0).compute_loss(net, y_pred, y)
 
 		# check results
 		self.assertAlmostEqual(cost, 0.693058761)
@@ -74,7 +74,7 @@ class ANNBinaryClassification(unittest.TestCase):
 
 		# compute loss
 		y = np.array([[True, False, True]]).T
-		loss, dloss = GradientDescent(cross_entropy_binary, 0).compute_loss(net, y_pred, y)
+		loss, dloss = SGD(cross_entropy_binary, 0).compute_loss(net, y_pred, y)
 
 		# propagate backwards
 		net.backward(dloss)

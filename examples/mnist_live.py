@@ -8,7 +8,7 @@ from sklearn.preprocessing import StandardScaler, LabelBinarizer
 
 from ann.act import relu, softmax_with_cross_entropy
 from ann.loss import cross_entropy_with_softmax
-from ann.opt import GradientDescentMomentum
+from ann.opt import SGDM
 from ann.sklearn import NetworkClassifier, FC
 
 # set seeds
@@ -27,7 +27,7 @@ layers = [
 	FC(n_in=1024, n_out=1024, act=relu),
 	FC(n_in=1024, n_out=10, act=softmax_with_cross_entropy)
 ]
-opt = GradientDescentMomentum(loss_func=cross_entropy_with_softmax, lr=0.01, batch_size=64, m=0.9)
+opt = SGDM(loss_func=cross_entropy_with_softmax, lr=0.01, batch_size=64, m=0.9)
 net = NetworkClassifier(layers, opt)
 epochs = 5
 

@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import ListedColormap
 from sklearn.datasets import make_circles
-from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
@@ -46,8 +45,7 @@ y_min, y_max = x[:, 1].min() - .5, x[:, 1].max() + .5
 xx, yy = np.meshgrid(np.arange(x_min, x_max, .02), np.arange(y_min, y_max, .02))
 Z = net.predict_proba(np.c_[xx.ravel(), yy.ravel()])[:, 1]
 Z = Z.reshape(xx.shape)
-x_test_pred = net.predict(x_test)
-test_acc = accuracy_score(y_test, x_test_pred)
+test_acc = net.score(x_test, y_test)
 
 # plot results
 cm = plt.cm.RdBu
@@ -56,8 +54,8 @@ plt.figure(figsize=(14, 7))
 ax = plt.subplot(1, 2, 1)
 ax.set_title("Training")
 ax.plot(range(len(losses)), losses)
-ax.set_xlabel("iterations")
-ax.set_ylabel("loss")
+ax.set_xlabel("Iterations")
+ax.set_ylabel("Loss")
 ax = plt.subplot(1, 2, 2)
 ax.set_title("Evaluation")
 ax.contourf(xx, yy, Z, cmap=cm, alpha=.8)

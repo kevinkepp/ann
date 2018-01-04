@@ -1,4 +1,5 @@
 import numpy as np
+from sklearn.base import BaseEstimator
 from sklearn.utils import shuffle
 
 import ann.act
@@ -6,7 +7,7 @@ import ann.loss
 
 
 class SGD(object):
-	def __init__(self, loss_func, lr=0.01, lr_decay=0, batch_size=0):
+	def __init__(self, loss_func, lr=0.01, lr_decay=None, batch_size=None):
 		self.loss_func = loss_func
 		self.lr = lr
 		self.lr_decay = lr_decay
@@ -18,7 +19,7 @@ class SGD(object):
 		y_pred = net.forward(x, deterministic=False)
 		loss, dy_pred = self.compute_loss(net, y_pred, y)
 		net.backward(dy_pred)
-		self.update_net(net)
+		self.update(net)
 		return loss
 
 	def compute_loss(self, net, y_pred, y, no_d=False):
@@ -29,16 +30,20 @@ class SGD(object):
 		dy_pred = ann.loss.get_d_loss(self.loss_func)(y_pred, y) if not no_d else None
 		return loss, dy_pred
 
-	def update_net(self, net):
+	def update(self, net):
 		lr = self.get_lr()
-		for i, layer in enumerate(net.layers):
-			layer.w -= lr * layer.dw
-			layer.b -= lr * layer.db
+		for layer in net.layers:
+			layer.vars["w"] -= lr * layer.vars["dw"]
+			layer.vars["b"] -= lr * layer.vars["db"]
 
-	def optimize(self, net, x_train, y_train, epochs, track_loss=False, x_dev=None, y_dev=None, early_stop=False,
-				 patience=100, tol=1e-8, iter_callback=None, verbose=0):
+	def _init(self, net):
 		self.reset()
+		net.reset()
 		net.initialize()
+
+	def optimize(self, net, x_train, y_train, epochs, track_loss=False, x_dev=None, y_dev=None, early_stop_pat=None,
+				 early_stop_tol=1e-8, iter_callback=None, verbose=0):
+		self._init(net)
 		ls_batch, ls_dev = [], []
 		comp_loss_dev = x_dev is not None and y_dev is not None
 		its_pat = 0
@@ -58,10 +63,10 @@ class SGD(object):
 					if verbose:
 						print("Under-/overflow detected")
 					break
-				if early_stop:
-					if ls_dev and loss_dev >= ls_dev[-1] - tol:
+				if early_stop_pat:
+					if ls_dev and loss_dev >= ls_dev[-1] - early_stop_tol:
 						its_pat += 1
-					if its_pat == patience:
+					if its_pat == early_stop_pat:
 						if verbose:
 							print("Stopping early")
 						break
@@ -92,15 +97,19 @@ class SGD(object):
 			yield x, y
 		else:
 			for i in range(nb):
-				yield x[i * bs:(i + 1) * bs, :], y[i * bs:(i + 1) * bs, :]
+				xb = x[i * bs:(i + 1) * bs, :]
+				yb = y[i * bs:(i + 1) * bs, :] if y.ndim == 2 else y[i * bs:(i + 1) * bs, ]
+				yield xb, yb
 			if x.shape[0] % bs != 0:
-				yield x[nb * bs:, :], y[nb * bs:, :]
+				xb = x[nb * bs:, :]
+				yb = y[nb * bs:, :] if y.ndim == 2 else y[nb * bs:, ]
+				yield xb, yb
 
 	def reset(self):
 		self._its = 0
 
 	def get_lr(self):
-		return 1 / (1 + self.lr_decay * self._its) * self.lr
+		return 1 / (1 + self.lr_decay * self._its) * self.lr if self.lr_decay else self.lr
 
 	@staticmethod
 	def _get_weight_decay(net, y_pred):
@@ -114,18 +123,24 @@ class SGDM(SGD):
 		super().__init__(loss_func, lr, lr_decay, batch_size)
 		self.m = m
 
-	def update_net(self, net):
+	def _init(self, net):
+		super(SGDM, self)._init(net)
+		for layer in net.layers:
+			layer.vars["mdw"] = np.zeros(layer.vars["w"].shape)
+			layer.vars["mdb"] = np.zeros(layer.vars["b"].shape)
+
+	def update(self, net):
 		lr = self.get_lr()
-		for i, layer in enumerate(net.layers):
+		for layer in net.layers:
 			# update moments
-			layer.mdw = self.m * layer.mdw + (1 - self.m) * layer.dw
-			layer.mdb = self.m * layer.mdb + (1 - self.m) * layer.db
+			layer.vars["mdw"] = self.m * layer.vars["mdw"] + (1 - self.m) * layer.vars["dw"]
+			layer.vars["mdb"] = self.m * layer.vars["mdb"] + (1 - self.m) * layer.vars["db"]
 			# bias correction
-			mdw = layer.mdw / (1 - np.power(self.m, self._its))
-			mdb = layer.mdb / (1 - np.power(self.m, self._its))
+			mdw = layer.vars["mdw"] / (1 - np.power(self.m, self._its))
+			mdb = layer.vars["mdb"] / (1 - np.power(self.m, self._its))
 			# update parameters
-			layer.w -= lr * mdw
-			layer.b -= lr * mdb
+			layer.vars["w"] -= lr * mdw
+			layer.vars["b"] -= lr * mdb
 
 
 class RMSprop(SGD):
@@ -134,18 +149,24 @@ class RMSprop(SGD):
 		self.rho = rho
 		self.eps = eps
 
-	def update_net(self, net):
+	def _init(self, net):
+		super(RMSprop, self)._init(net)
+		for layer in net.layers:
+			layer.vars["vdw"] = np.zeros(layer.vars["w"].shape)
+			layer.vars["vdb"] = np.zeros(layer.vars["b"].shape)
+
+	def update(self, net):
 		lr = self.get_lr()
-		for i, layer in enumerate(net.layers):
+		for layer in net.layers:
 			# update moments
-			layer.vdw = self.rho * layer.vdw + (1 - self.rho) * np.power(layer.dw, 2)
-			layer.vdb = self.rho * layer.vdb + (1 - self.rho) * np.power(layer.db, 2)
+			layer.vars["vdw"] = self.rho * layer.vars["vdw"] + (1 - self.rho) * np.power(layer.vars["dw"], 2)
+			layer.vars["vdb"] = self.rho * layer.vars["vdb"] + (1 - self.rho) * np.power(layer.vars["db"], 2)
 			# bias correction
-			vdw = layer.vdw / (1 - np.power(self.rho, self._its))
-			vdb = layer.vdb / (1 - np.power(self.rho, self._its))
+			vdw = layer.vars["vdw"] / (1 - np.power(self.rho, self._its))
+			vdb = layer.vars["vdb"] / (1 - np.power(self.rho, self._its))
 			# update parameters
-			layer.w -= lr * np.divide(layer.dw, np.square(vdw) + self.eps)
-			layer.b -= lr * np.divide(layer.db, np.square(vdb) + self.eps)
+			layer.vars["w"] -= lr * np.divide(layer.vars["dw"], np.square(vdw) + self.eps)
+			layer.vars["b"] -= lr * np.divide(layer.vars["db"], np.square(vdb) + self.eps)
 
 
 class Adam(SGD):
@@ -155,21 +176,29 @@ class Adam(SGD):
 		self.beta2 = beta2
 		self.eps = eps
 
-	def update_net(self, net):
+	def _init(self, net):
+		super(Adam, self)._init(net)
+		for layer in net.layers:
+			layer.vars["mdw"] = np.zeros(layer.vars["w"].shape)
+			layer.vars["mdb"] = np.zeros(layer.vars["b"].shape)
+			layer.vars["vdw"] = np.zeros(layer.vars["w"].shape)
+			layer.vars["vdb"] = np.zeros(layer.vars["b"].shape)
+
+	def update(self, net):
 		lr = self.get_lr()
 		beta1 = self.beta1
 		beta2 = self.beta2
-		for i, layer in enumerate(net.layers):
+		for layer in net.layers:
 			# update moments
-			layer.mdw = beta1 * layer.mdw + (1 - beta1) * layer.dw
-			layer.mdb = beta1 * layer.mdb + (1 - beta1) * layer.db
-			layer.vdw = beta2 * layer.vdw + (1 - beta2) * np.power(layer.dw, 2)
-			layer.vdb = beta2 * layer.vdb + (1 - beta2) * np.power(layer.db, 2)
+			layer.vars["mdw"] = beta1 * layer.vars["mdw"] + (1 - beta1) * layer.vars["dw"]
+			layer.vars["mdb"] = beta1 * layer.vars["mdb"] + (1 - beta1) * layer.vars["db"]
+			layer.vars["vdw"] = beta2 * layer.vars["vdw"] + (1 - beta2) * np.power(layer.vars["dw"], 2)
+			layer.vars["vdb"] = beta2 * layer.vars["vdb"] + (1 - beta2) * np.power(layer.vars["db"], 2)
 			# bias correction
-			mdw = layer.mdw / (1 - np.power(beta1, self._its))
-			mdv = layer.mdb / (1 - np.power(beta1, self._its))
-			vdw = layer.vdw / (1 - np.power(beta2, self._its))
-			vdb = layer.vdb / (1 - np.power(beta2, self._its))
+			mdw = layer.vars["mdw"] / (1 - np.power(beta1, self._its))
+			mdv = layer.vars["mdb"] / (1 - np.power(beta1, self._its))
+			vdw = layer.vars["vdw"] / (1 - np.power(beta2, self._its))
+			vdb = layer.vars["vdb"] / (1 - np.power(beta2, self._its))
 			# update parameters
-			layer.w -= lr * np.divide(mdw, np.square(vdw) + self.eps)
-			layer.b -= lr * np.divide(mdv, np.square(vdb) + self.eps)
+			layer.vars["w"] -= lr * np.divide(mdw, np.square(vdw) + self.eps)
+			layer.vars["b"] -= lr * np.divide(mdv, np.square(vdb) + self.eps)

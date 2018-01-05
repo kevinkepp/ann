@@ -6,7 +6,7 @@ import ann.act
 import ann.loss
 
 
-class SGD(object):
+class SGD(BaseEstimator):
 	def __init__(self, loss, lr=0.01, lr_decay=None, batch_size=None):
 		self.loss = loss
 		self.lr = lr

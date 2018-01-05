@@ -1,56 +1,85 @@
 import numpy as np
 
 
-def mse(y_pred, y):
+def mse(a, y):
 	m = y.shape[0]
-	return np.sum(np.power(y_pred - y, 2)) / m
+	return np.sum(np.power(a - y, 2)) / m
 
 
-def d_mse(y_pred, y):
-	return 2 * (y_pred - y)
+def d_mse(a, y):
+	return 2 * (a - y)
 
 
-def cross_entropy_binary(y_pred, y):
-	"""y_pred - shape (m,1) and values in [0,1]"""
+def xentropy(a, y):
+	"""
+	:param a: shape (m,n) or (m,) and values in [0,1]
+	:param y: shape (m,n) or (m,) and values in {0,1}
+	:return:
+	"""
 	m = y.shape[0]
-	nll = -np.dot(y.T, np.log(y_pred)) - np.dot(1 - y.T, np.log(1 - y_pred))
+	if y.ndim == 1 or y.shape[1] == 1:
+		return binary_xentropy(a, y)
+	a_y = np.sum(np.multiply(a, y), axis=1)  # class probabilities for correct classes
+	nll = -np.log(a_y)
 	return np.sum(nll) / m
 
 
-def d_cross_entropy_binary(y_pred, y):
-	return np.divide(1 - y, 1 - y_pred) - np.divide(y, y_pred)
+def d_xentropy(a, y):
+	print(
+		"Warning: Cross entropy can be numerically unstable. Use loss.xentropy_with_softmax or "
+		"loss.binary_xentropy_with_sigmoid when possible.")
+	if y.ndim == 1 or y.shape[1] == 1:
+		return d_binary_xentropy(a, y)
+	return -np.divide(y, a)
 
 
-def cross_entropy(y_pred, y):
-	"""y_pred - shape (m,n) and values in [0,1]"""
+def binary_xentropy(a, y):
+	"""
+	:param a: shape (m,1) or (m,) with values in [0,1]
+	:param y: shape (m,1) or (m,) with values in {0,1}
+	:return:
+	"""
 	m = y.shape[0]
-	nll = -np.log(np.sum(np.multiply(y_pred, y), axis=1))
+	a_y = np.multiply(a, y) + np.multiply(1 - a, 1 - y)  # class probabilities for correct classes
+	nll = -np.log(a_y)
 	return np.sum(nll) / m
 
 
-def d_cross_entropy(y_pred, y):
-	# FIXME this can be numerically unstable, is there a way to make it stable?
-	return -np.divide(y, y_pred)
+def d_binary_xentropy(a, y):
+	print(
+		"Warning: Cross entropy can be numerically unstable. Use loss.xentropy_with_softmax or "
+		"loss.binary_xentropy_with_sigmoid when possible.")
+	return np.divide(1 - y, 1 - a) - np.divide(y, a)
 
 
-def cross_entropy_with_softmax(y_pred, y):
-	"""to be used in conjunction with activation function act.softmax_with_cross_entropy"""
-	return cross_entropy(y_pred, y)
+def xentropy_with_softmax(a, y):
+	"""To be used in conjunction with activation function act.softmax_with_xentropy"""
+	return xentropy(a, y)
 
 
-def d_cross_entropy_with_softmax(y_pred, y):
-	# calculates dz directly using LogSumExp trick
-	return y_pred - y
+def d_xentropy_with_softmax(a, y):
+	# computes dz directly instead of computing first da and then dz
+	return a - y
+
+
+def binary_xentropy_with_sigmoid(a, y):
+	"""To be used in conjunction with activation function act.sigmoid_with_xentropy"""
+	return binary_xentropy(a, y)
+
+
+def d_binary_xentropy_with_sigmoid(a, y):
+	# computes dz directly instead of computing first da and then dz
+	return a - y
 
 
 def get_d_loss(loss):
 	if loss == mse:
 		return d_mse
-	elif loss == cross_entropy_binary:
-		return d_cross_entropy_binary
-	elif loss == cross_entropy:
-		return d_cross_entropy
-	elif loss == cross_entropy_with_softmax:
-		return d_cross_entropy_with_softmax
+	elif loss == xentropy:
+		return d_xentropy
+	elif loss == xentropy_with_softmax:
+		return d_xentropy_with_softmax
+	elif loss == binary_xentropy_with_sigmoid:
+		return d_binary_xentropy_with_sigmoid
 	else:
 		raise NotImplementedError("No derivative for loss function '{}'".format(loss.__name__))

@@ -7,8 +7,8 @@ import ann.loss
 
 
 class SGD(object):
-	def __init__(self, loss_func, lr=0.01, lr_decay=None, batch_size=None):
-		self.loss_func = loss_func
+	def __init__(self, loss, lr=0.01, lr_decay=None, batch_size=None):
+		self.loss = loss
 		self.lr = lr
 		self.lr_decay = lr_decay
 		self.batch_size = batch_size
@@ -16,19 +16,19 @@ class SGD(object):
 
 	def step(self, net, x, y):
 		self._its += 1
-		y_pred = net.forward(x, deterministic=False)
-		loss, dy_pred = self.compute_loss(net, y_pred, y)
-		net.backward(dy_pred)
+		a = net.forward(x, deterministic=False)
+		loss, da = self.compute_loss(net, a, y)
+		net.backward(da)
 		self.update(net)
 		return loss
 
-	def compute_loss(self, net, y_pred, y, no_d=False):
+	def compute_loss(self, net, a, y, no_d=False):
 		if y.ndim == 1:
 			y = y.reshape(-1, 1)
-		loss = self.loss_func(y_pred, y)
-		loss += self._get_weight_decay(net, y_pred)
-		dy_pred = ann.loss.get_d_loss(self.loss_func)(y_pred, y) if not no_d else None
-		return loss, dy_pred
+		cost = self.loss(a, y)
+		cost += self._get_weight_decay(net, a)
+		da = ann.loss.get_d_loss(self.loss)(a, y) if not no_d else None
+		return cost, da
 
 	def update(self, net):
 		lr = self.get_lr()
@@ -42,7 +42,7 @@ class SGD(object):
 		net.initialize()
 
 	def optimize(self, net, x_train, y_train, epochs, track_loss=False, x_dev=None, y_dev=None, early_stop_pat=None,
-				 early_stop_tol=1e-8, iter_callback=None, verbose=0):
+				 early_stop_tol=1e-8, iter_callback=None, break_on_overflow=True, verbose=0):
 		self._init(net)
 		ls_batch, ls_dev = [], []
 		comp_loss_dev = x_dev is not None and y_dev is not None
@@ -62,7 +62,8 @@ class SGD(object):
 						(np.math.isinf(loss_dev) or np.math.isnan(loss_dev)):
 					if verbose:
 						print("Under-/overflow detected")
-					break
+					if break_on_overflow:
+						break
 				if early_stop_pat:
 					if ls_dev and loss_dev >= ls_dev[-1] - early_stop_tol:
 						its_pat += 1
@@ -112,15 +113,15 @@ class SGD(object):
 		return 1 / (1 + self.lr_decay * self._its) * self.lr if self.lr_decay else self.lr
 
 	@staticmethod
-	def _get_weight_decay(net, y_pred):
-		m = y_pred.shape[0]
+	def _get_weight_decay(net, a):
+		m = a.shape[0]
 		return 1 / (2 * m) * np.sum(
 			[layer.weight_decay * np.linalg.norm(layer.w, "fro") if layer.weight_decay else 0 for layer in net.layers])
 
 
 class SGDM(SGD):
-	def __init__(self, loss_func, lr=0.01, lr_decay=0, batch_size=0, m=0.9):
-		super().__init__(loss_func, lr, lr_decay, batch_size)
+	def __init__(self, loss, lr=0.01, lr_decay=0, batch_size=0, m=0.9):
+		super().__init__(loss, lr, lr_decay, batch_size)
 		self.m = m
 
 	def _init(self, net):
@@ -144,8 +145,8 @@ class SGDM(SGD):
 
 
 class RMSprop(SGD):
-	def __init__(self, loss_func, lr=0.001, lr_decay=0, batch_size=0, rho=0.9, eps=1e-8):
-		super().__init__(loss_func, lr, lr_decay, batch_size)
+	def __init__(self, loss, lr=0.001, lr_decay=0, batch_size=0, rho=0.9, eps=1e-8):
+		super().__init__(loss, lr, lr_decay, batch_size)
 		self.rho = rho
 		self.eps = eps
 
@@ -170,8 +171,8 @@ class RMSprop(SGD):
 
 
 class Adam(SGD):
-	def __init__(self, loss_func, lr=0.001, lr_decay=0, batch_size=0, beta1=0.9, beta2=0.999, eps=1e-8):
-		super().__init__(loss_func, lr, lr_decay, batch_size)
+	def __init__(self, loss, lr=0.001, lr_decay=0, batch_size=0, beta1=0.9, beta2=0.999, eps=1e-8):
+		super().__init__(loss, lr, lr_decay, batch_size)
 		self.beta1 = beta1
 		self.beta2 = beta2
 		self.eps = eps

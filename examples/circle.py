@@ -9,9 +9,9 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
 # prepare data
-from ann.act import sigmoid, relu
+from ann.act import relu, sigmoid_with_binary_xentropy
 from ann.base import FC
-from ann.loss import cross_entropy_binary
+from ann.loss import binary_xentropy_with_sigmoid
 from ann.opt import SGD
 from ann.sklearn import NetworkClassifier
 
@@ -27,9 +27,9 @@ x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2)
 # define model and optimization
 layers = [
 	FC(n_in=x_train.shape[1], n_out=32, act=relu),
-	FC(n_in=32, n_out=1, act=sigmoid)
+	FC(n_in=32, n_out=1, act=sigmoid_with_binary_xentropy)
 ]
-opt = SGD(loss_func=cross_entropy_binary, lr=0.1)
+opt = SGD(loss=binary_xentropy_with_sigmoid, lr=0.1)
 net = NetworkClassifier(layers, opt)
 
 # train network

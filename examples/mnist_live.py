@@ -6,8 +6,8 @@ from sklearn.datasets import fetch_mldata
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, LabelBinarizer
 
-from ann.act import relu, softmax_with_cross_entropy
-from ann.loss import cross_entropy_with_softmax
+from ann.act import relu, softmax_with_xentropy
+from ann.loss import xentropy_with_softmax
 from ann.opt import SGDM
 from ann.sklearn import NetworkClassifier, FC
 
@@ -17,17 +17,21 @@ np.random.seed(42)
 
 # prepare data
 mnist = fetch_mldata('MNIST original')
-x = StandardScaler().fit_transform(mnist.data)
+x = mnist.data
 y = LabelBinarizer().fit_transform(mnist.target.astype(int))
 x_train, x_dev, y_train, y_dev = train_test_split(x, y, test_size=1000, stratify=y)
+# normalize input
+scaler = StandardScaler(copy=False)
+x_train = scaler.fit_transform(x_train)
+x_dev = scaler.transform(x_dev)
 
 # define model and optimization
 layers = [
 	FC(n_in=x.shape[1], n_out=1024, act=relu),
 	FC(n_in=1024, n_out=1024, act=relu),
-	FC(n_in=1024, n_out=10, act=softmax_with_cross_entropy)
+	FC(n_in=1024, n_out=10, act=softmax_with_xentropy)
 ]
-opt = SGDM(loss_func=cross_entropy_with_softmax, lr=0.01, batch_size=64, m=0.9)
+opt = SGDM(loss=xentropy_with_softmax, lr=0.01, batch_size=64, m=0.9)
 net = NetworkClassifier(layers, opt)
 epochs = 5
 

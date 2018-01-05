@@ -18,18 +18,15 @@ class Network(object):
 			l.initialize()
 
 	def forward(self, x, deterministic=True):
-		a_prev = x
+		a = x
 		for l in self.layers:
-			a = l.forward(a_prev, deterministic)
-			a_prev = a
-		return a_prev
+			a = l.forward(a, deterministic)
+		return a
 
-	def backward(self, dy_pred):
-		da_next = dy_pred
+	def backward(self, da):
 		for l in reversed(self.layers):
-			d_a = l.backward(da_next)
-			da_next = d_a
-		return da_next
+			da = l.backward(da)
+		return da
 
 	def reset(self):
 		for l in self.layers:
@@ -47,14 +44,13 @@ class FC(object):
 		self.n_out = n_out
 		self.act = act
 		self.d_act = ann.act.get_d_act(act)
-		self.init = init
+		self.init = init if init else ann.init.get_default_init_func(act)
 		self.weight_decay = weight_decay
 		self.dropout = dropout
 		self.vars = {}
 
 	def initialize(self):
-		init = self.init if self.init else ann.init.get_default_init_func(self.act)
-		self.vars["w"] = init(self.n_in, self.n_out)
+		self.vars["w"] = self.init(self.n_in, self.n_out)
 		self.vars["b"] = np.zeros((1, self.n_out))
 
 	def forward(self, a_prev, deterministic=True):
@@ -74,12 +70,14 @@ class FC(object):
 		l2 = self.weight_decay / m * self.vars["w"]
 		if self.act == ann.act.softmax:
 			# from https://stackoverflow.com/a/33580680/1662053
-			# TODO gradient check and understand this
+			# derivative of softmax depends not only on a but also on da (gradient coming from loss function)
+			# TODO verify, gradient check and understand this
 			tmp = np.multiply(self.vars["a"], self.vars["da_drop"])
 			s = np.sum(tmp, axis=1, keepdims=True)
 			self.vars["dz"] = tmp - self.vars["a"] * s
-		elif self.act == ann.act.softmax_with_cross_entropy:
-			self.vars["dz"] = self.vars["da_drop"]  # dz directly calculated in loss.d_cross_entropy_with_softmax
+		elif self.act == ann.act.sigmoid_with_binary_xentropy or self.act == ann.act.softmax_with_xentropy:
+			# dz is calculated in derivative of loss function
+			self.vars["dz"] = self.vars["da_drop"]
 		else:
 			self.vars["dz"] = np.multiply(self.vars["da_drop"], self.d_act(self.vars["a"]))
 		self.vars["dw"] = np.dot(self.vars["a_prev"].T, self.vars["dz"]) / m + l2

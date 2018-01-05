@@ -34,13 +34,18 @@ def d_sigmoid(a):
 	return a * (1 - a)
 
 
+def sigmoid_with_binary_xentropy(z):
+	"""To be used in conjunction with loss.binary_xentropy_with_sigmoid"""
+	return sigmoid(z)
+
+
 def softmax(z):
 	exps = np.exp(z - np.max(z, axis=1, keepdims=True))
 	return exps / np.sum(exps, axis=1, keepdims=True)
 
 
-def softmax_with_cross_entropy(z):
-	"""should be used in conjunction with loss.cross_entropy_with_softmax"""
+def softmax_with_xentropy(z):
+	"""To be used in conjunction with loss.xentropy_with_softmax"""
 	return softmax(z)
 
 
@@ -53,8 +58,11 @@ def get_d_act(act):
 		return d_tanh
 	elif act == sigmoid:
 		return d_sigmoid
-	elif act == softmax or act == softmax_with_cross_entropy:
-		# derivative depends on loss function and will be calculated in layer backward method
+	elif act == softmax:
+		# derivative depends on derivative of loss function and thus will be calculated in layer backward method
+		return None
+	elif act == softmax_with_xentropy or act == sigmoid_with_binary_xentropy:
+		# derivative can be simplified and thus will be calculated in layer backward method
 		return None
 	else:
 		raise NotImplementedError("No derivative for activation function '{}'".format(act.__name__))

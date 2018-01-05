@@ -63,8 +63,7 @@ class FC(object):
 		return self.vars["a"]
 
 	def backward(self, da):
-		self.vars["da"] = da
-		self.vars["da_drop"] = np.multiply(da, self.vars["drop_mask"]) / (1 - self.dropout) \
+		self.vars["da"] = np.multiply(da, self.vars["drop_mask"]) / (1 - self.dropout) \
 			if "drop_mask" in self.vars else da
 		m = self.vars["a_prev"].shape[0]
 		l2 = self.weight_decay / m * self.vars["w"]
@@ -72,14 +71,14 @@ class FC(object):
 			# from https://stackoverflow.com/a/33580680/1662053
 			# derivative of softmax depends not only on a but also on da (gradient coming from loss function)
 			# TODO verify, gradient check and understand this
-			tmp = np.multiply(self.vars["a"], self.vars["da_drop"])
+			tmp = np.multiply(self.vars["a"], self.vars["da"])
 			s = np.sum(tmp, axis=1, keepdims=True)
 			self.vars["dz"] = tmp - self.vars["a"] * s
 		elif self.act == ann.act.sigmoid_with_binary_xentropy or self.act == ann.act.softmax_with_xentropy:
 			# dz is calculated in derivative of loss function
-			self.vars["dz"] = self.vars["da_drop"]
+			self.vars["dz"] = self.vars["da"]
 		else:
-			self.vars["dz"] = np.multiply(self.vars["da_drop"], self.d_act(self.vars["a"]))
+			self.vars["dz"] = np.multiply(self.vars["da"], self.d_act(self.vars["a"]))
 		self.vars["dw"] = np.dot(self.vars["a_prev"].T, self.vars["dz"]) / m + l2
 		self.vars["db"] = np.sum(self.vars["dz"], axis=0, keepdims=True) / m
 		self.vars["da_prev"] = np.dot(self.vars["dz"], self.vars["w"].T)

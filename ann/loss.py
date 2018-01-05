@@ -63,7 +63,7 @@ def d_xentropy_with_softmax(a, y):
 
 
 def binary_xentropy_with_sigmoid(a, y):
-	"""To be used in conjunction with activation function act.sigmoid_with_xentropy"""
+	"""To be used in conjunction with activation function act.sigmoid_with_binary_xentropy"""
 	return binary_xentropy(a, y)
 
 

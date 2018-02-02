@@ -3,7 +3,7 @@ import numpy as np
 
 def mse(a, y):
 	m = y.shape[0]
-	return np.sum(np.power(a - y, 2)) / m
+	return np.sum((a - y) ** 2) / m
 
 
 def d_mse(a, y):
@@ -19,7 +19,7 @@ def xentropy(a, y):
 	m = y.shape[0]
 	if y.ndim == 1 or y.shape[1] == 1:
 		return binary_xentropy(a, y)
-	a_y = np.sum(np.multiply(a, y), axis=1)  # class probabilities for correct classes
+	a_y = np.sum(a * y, axis=1)  # class probabilities for correct classes
 	nll = -np.log(a_y)
 	return np.sum(nll) / m
 
@@ -30,7 +30,7 @@ def d_xentropy(a, y):
 		"loss.binary_xentropy_with_sigmoid when possible.")
 	if y.ndim == 1 or y.shape[1] == 1:
 		return d_binary_xentropy(a, y)
-	return -np.divide(y, a)
+	return - y / a
 
 
 def binary_xentropy(a, y):
@@ -40,7 +40,7 @@ def binary_xentropy(a, y):
 	:return:
 	"""
 	m = y.shape[0]
-	a_y = np.multiply(a, y) + np.multiply(1 - a, 1 - y)  # class probabilities for correct classes
+	a_y = a * y + (1 - a) * (1 - y)  # class probabilities for correct classes
 	nll = -np.log(a_y)
 	return np.sum(nll) / m
 
@@ -49,7 +49,7 @@ def d_binary_xentropy(a, y):
 	print(
 		"Warning: Cross entropy can be numerically unstable. Use loss.xentropy_with_softmax or "
 		"loss.binary_xentropy_with_sigmoid when possible.")
-	return np.divide(1 - y, 1 - a) - np.divide(y, a)
+	return (1 - y) / (1 - a) - y / a
 
 
 def xentropy_with_softmax(a, y):

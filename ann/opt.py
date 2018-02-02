@@ -137,8 +137,8 @@ class SGDM(SGD):
 			layer.vars["mdw"] = self.m * layer.vars["mdw"] + (1 - self.m) * layer.vars["dw"]
 			layer.vars["mdb"] = self.m * layer.vars["mdb"] + (1 - self.m) * layer.vars["db"]
 			# bias correction
-			mdw = layer.vars["mdw"] / (1 - np.power(self.m, self._its))
-			mdb = layer.vars["mdb"] / (1 - np.power(self.m, self._its))
+			mdw = layer.vars["mdw"] / (1 - self.m ** self._its)
+			mdb = layer.vars["mdb"] / (1 - self.m ** self._its)
 			# update parameters
 			layer.vars["w"] -= lr * mdw
 			layer.vars["b"] -= lr * mdb
@@ -160,14 +160,14 @@ class RMSprop(SGD):
 		lr = self.get_lr()
 		for layer in net.layers:
 			# update moments
-			layer.vars["vdw"] = self.rho * layer.vars["vdw"] + (1 - self.rho) * np.power(layer.vars["dw"], 2)
-			layer.vars["vdb"] = self.rho * layer.vars["vdb"] + (1 - self.rho) * np.power(layer.vars["db"], 2)
+			layer.vars["vdw"] = self.rho * layer.vars["vdw"] + (1 - self.rho) * layer.vars["dw"] ** 2
+			layer.vars["vdb"] = self.rho * layer.vars["vdb"] + (1 - self.rho) * layer.vars["db"] ** 2
 			# bias correction
-			vdw = layer.vars["vdw"] / (1 - np.power(self.rho, self._its))
-			vdb = layer.vars["vdb"] / (1 - np.power(self.rho, self._its))
+			vdw = layer.vars["vdw"] / (1 - self.rho ** self._its)
+			vdb = layer.vars["vdb"] / (1 - self.rho ** self._its)
 			# update parameters
-			layer.vars["w"] -= lr * np.divide(layer.vars["dw"], np.square(vdw) + self.eps)
-			layer.vars["b"] -= lr * np.divide(layer.vars["db"], np.square(vdb) + self.eps)
+			layer.vars["w"] -= lr * layer.vars["dw"] / (np.square(vdw) + self.eps)
+			layer.vars["b"] -= lr * layer.vars["db"] / (np.square(vdb) + self.eps)
 
 
 class Adam(SGD):
@@ -193,13 +193,13 @@ class Adam(SGD):
 			# update moments
 			layer.vars["mdw"] = beta1 * layer.vars["mdw"] + (1 - beta1) * layer.vars["dw"]
 			layer.vars["mdb"] = beta1 * layer.vars["mdb"] + (1 - beta1) * layer.vars["db"]
-			layer.vars["vdw"] = beta2 * layer.vars["vdw"] + (1 - beta2) * np.power(layer.vars["dw"], 2)
-			layer.vars["vdb"] = beta2 * layer.vars["vdb"] + (1 - beta2) * np.power(layer.vars["db"], 2)
+			layer.vars["vdw"] = beta2 * layer.vars["vdw"] + (1 - beta2) * layer.vars["dw"] ** 2
+			layer.vars["vdb"] = beta2 * layer.vars["vdb"] + (1 - beta2) * layer.vars["db"] ** 2
 			# bias correction
-			mdw = layer.vars["mdw"] / (1 - np.power(beta1, self._its))
-			mdv = layer.vars["mdb"] / (1 - np.power(beta1, self._its))
-			vdw = layer.vars["vdw"] / (1 - np.power(beta2, self._its))
-			vdb = layer.vars["vdb"] / (1 - np.power(beta2, self._its))
+			mdw = layer.vars["mdw"] / (1 - beta1 ** self._its)
+			mdv = layer.vars["mdb"] / (1 - beta1 ** self._its)
+			vdw = layer.vars["vdw"] / (1 - beta2 ** self._its)
+			vdb = layer.vars["vdb"] / (1 - beta2 ** self._its)
 			# update parameters
-			layer.vars["w"] -= lr * np.divide(mdw, np.square(vdw) + self.eps)
-			layer.vars["b"] -= lr * np.divide(mdv, np.square(vdb) + self.eps)
+			layer.vars["w"] -= lr * mdw / (np.square(vdw) + self.eps)
+			layer.vars["b"] -= lr * mdv / (np.square(vdb) + self.eps)
